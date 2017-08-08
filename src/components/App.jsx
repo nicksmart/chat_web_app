@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
-// import logo from '../assets/img/logo.svg';
 import '../App.css';
+import * as firebase from 'firebase';
 
 class App extends Component {
   constructor(props) {
@@ -14,11 +14,32 @@ class App extends Component {
     this.submit = this.submit.bind(this);
   }
 
+  componentDidMount() {
+    console.log("componentDidMount called");
+
+    firebase.database().ref('messages/').on('value', (snapshot) => {
+      const currentMessages = snapshot.val();
+      if (currentMessages != null) {
+        this.setState({
+          messages: currentMessages
+        });
+      }
+    })
+  }
+
   updateMessage(e) {
-    // console.log("message: ", e.target.value);
     this.setState({
       message: e.target.value
     });
+  }
+
+  getDateAndTime(dateObj) {
+    dateObj.currentHour = dateObj.currentDate.getHours();
+    dateObj.currentHour = this.addZeroToTime(dateObj.currentHour);
+    dateObj.currentMin = dateObj.currentDate.getMinutes();
+    dateObj.currentMin = this.addZeroToTime(dateObj.currentMin);
+    dateObj.currentSec = dateObj.currentDate.getSeconds();
+    dateObj.currentSec = this.addZeroToTime(dateObj.currentSec);
   }
 
   addZeroToTime(time) {
@@ -32,26 +53,24 @@ class App extends Component {
   submit(e) {
     if (this.state.message.length > 0) {
       console.log("message: ", this.state.message);
-      const currentDate = new Date();
-      let currentHour = currentDate.getHours();
-      currentHour = this.addZeroToTime(currentHour);
-      let currentMin = currentDate.getMinutes();
-      currentMin = this.addZeroToTime(currentMin);
-      let currentSec = currentDate.getSeconds();
-      currentSec = this.addZeroToTime(currentSec);
+      let dateObj = {
+        currentDate: new Date(),
+        currentHour: "",
+        currentMin: "",
+        currentSec: ""
+      }
+
+      this.getDateAndTime(dateObj);
 
       const nextMessage = {
         id: this.state.messages.length,
-        timestamp: (currentDate.toDateString() + " " + currentHour + ":" + currentMin + ":" + currentSec),
+        timestamp: (dateObj.currentDate.toDateString() + " " + dateObj.currentHour + ":" + dateObj.currentMin + ":" + dateObj.currentSec),
         text: this.state.message
       }
 
-      this.setState({
-        messages: this.state.messages.concat([nextMessage]),
-        message: ""
-      })
+      firebase.database().ref('messages/' + nextMessage.id).set(nextMessage);
 
-      // console.log(this.state.messages);
+      // This gets rid of the text in the input field after clicking submit
       document.getElementById("message-input").value = "";
     }
     else {
